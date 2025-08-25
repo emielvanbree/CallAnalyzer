@@ -14,6 +14,9 @@
     h3{font-weight:700; font-size:clamp(16px,3vw,24px); color:var(--light-blue); margin:0 0 8px;}
     .card{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:clamp(12px,3vw,18px); border:1px solid #EAECEF;}
     .controls{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:var(--gap); position:sticky; top:0; background:var(--surface-alt); padding:10px 0; z-index:5; align-items:stretch;}
+    .api-key-controls{display:grid; grid-template-columns:1fr auto; gap:var(--gap); align-items:center; margin-bottom:12px;}
+    .api-key-controls input[type="password"]{width:100%; padding:14px 16px; border:1px solid #ccc; border-radius:12px; box-sizing:border-box;}
+    .api-key-controls button{min-width:120px; padding:14px;}
     button{width:100%; border:none; border-radius:12px; padding:14px 16px; font-weight:700; font-size:16px; background:var(--light-blue); color:#fff; box-shadow:var(--shadow); cursor:pointer; box-sizing:border-box; min-height:48px;}
     button.secondary{background:var(--just-grey);} 
     button:disabled{opacity:.55; box-shadow:none; cursor:not-allowed;}
@@ -40,6 +43,15 @@
     <h1><span class="badge">📞</span> Service Call Analyzer</h1>
     <p class="subtitle">Record a service call, upload a WAV file, or paste a transcript manually — then let ChatGPT generate a scored <strong>Service Call Scorecard</strong>.</p>
 
+    <div class="card">
+      <h3>Enter your OpenAI API Key</h3>
+      <p>Your key is stored only in your browser's local storage.</p>
+      <div class="api-key-controls">
+        <input type="password" id="apiKeyInput" placeholder="sk-..." />
+        <button id="saveKeyBtn">Save Key</button>
+      </div>
+    </div>
+    
     <div class="controls">
       <button id="startBtn">Start Recording</button>
       <button id="stopBtn" disabled>Stop Recording</button>
@@ -74,8 +86,9 @@
   <script>
     // ====== CONFIG (keys you provided) ======
     const ASSEMBLY_KEY = "99bfc1680f0b4cca9e7d3ce2495eb058";
-    const OPENAI_KEY = "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";
     const OPENAI_MODEL = "gpt-4o-mini";
+    
+    let OPENAI_KEY = '';
 
     // ====== Helpers ======
     function toHTMLWithBreaks(text){ return (text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
@@ -95,6 +108,36 @@
     const summaryBox=document.getElementById('summary');
     const transcriptStatus=document.getElementById('transcriptStatus');
     const scoreStatus=document.getElementById('scoreStatus');
+    const apiKeyInput=document.getElementById('apiKeyInput');
+    const saveKeyBtn=document.getElementById('saveKeyBtn');
+
+    // ====== Initial state check and API key loading ======
+    function checkApiKey(){
+      OPENAI_KEY = localStorage.getItem('openai_key') || '';
+      if (OPENAI_KEY) {
+        apiKeyInput.value = '********'; // Mask the input
+        saveKeyBtn.textContent = 'Key Saved';
+        saveKeyBtn.disabled = true;
+        uploadBtn.disabled = false;
+        analyzeManualBtn.disabled = false;
+        console.log('API Key loaded from local storage.');
+      } else {
+        uploadBtn.disabled = true;
+        analyzeManualBtn.disabled = true;
+        console.log('No API Key found. Please enter one.');
+      }
+    }
+    window.onload = checkApiKey;
+    
+    saveKeyBtn.addEventListener('click', () => {
+      const key = apiKeyInput.value.trim();
+      if(key.startsWith('sk-')){
+        localStorage.setItem('openai_key', key);
+        checkApiKey();
+      } else {
+        alert('Please enter a valid OpenAI API key.');
+      }
+    });
 
     // ====== Diagnostics (show JS errors in UI) ======
     window.addEventListener('error', (e)=>{ summaryBox.innerHTML = '❌ JS error: '+(e?.message||'Unknown'); });
@@ -139,6 +182,9 @@
 
     // ====== OpenAI scoring ======
 async function analyzeWithOpenAI(transcriptText){
+  if (!OPENAI_KEY) {
+    throw new Error('OpenAI API key not set. Please enter your key.');
+  }
   const prompt = `You are an expert service desk quality assurance analyst. Your task is to analyze the provided transcript of a customer service call and produce a structured HTML scorecard.\n\nReturn VALID HTML only (no markdown). Include, in order: \n1) <p class=\"overall-score\"><b>Overall score: X.X out of 5</b></p> (X.X is the average of five metrics rounded to one decimal).\n2) <table class=\"scorecard\"> with headers: Metric | Score (1-5) | Rationale. Use exactly these metric names: Professionalism and Script Adherence; Active Listening and Empathy; Problem-Solving and Accuracy; Sentiment and Emotional Shift; Customer Effort.\n3) <div class=\"post-summary\"> with <h4>Overall Score Explanation</h4><p>2–3 sentences.</p><h4>Recommendations</h4><ul><li>3–5 bullets</li></ul><h4>Learning Goals</h4><ul><li>3–5 bullets</li></ul>\nWrap long content so it fits within page width.\n\n**As a final step before you begin, perform a strict check for any sensitive, personally identifiable information (PII) such as names, phone numbers, email addresses, or account details. If found, replace them with a generic placeholder like [ANONYMIZED DATA] to ensure full GDPR compliance.**\n\nTRANSCRIPT (GDPR-masked):\n${anonymizePII(transcriptText)}`;
   const payload = { model: OPENAI_MODEL, messages:[{ role:'user', content: prompt }], temperature:0.2 };
   const r = await fetch('https://api.openai.com/v1/chat/completions',{ method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${OPENAI_KEY}` }, body: JSON.stringify(payload) });
@@ -170,8 +216,19 @@ async function analyzeWithOpenAI(transcriptText){
       try{ const scorecard = await analyzeWithOpenAI(manualText); scoreStatus.textContent='Done'; summaryBox.innerHTML=scorecard; downloadWordBtn.disabled=false; }catch(err){ scoreStatus.textContent='Error'; summaryBox.innerHTML='❌ '+(err?.message||err); downloadWordBtn.disabled=true; }
     });
 
-    clearBtn.addEventListener('click', ()=>{
-      manualTranscriptEl.value=''; transcriptBox.textContent='No transcript yet...'; summaryBox.innerHTML='No scorecard yet...'; transcriptStatus.textContent='Idle'; scoreStatus.textContent='Waiting'; downloadWordBtn.disabled=true; audioFileInput.value=''; startBtn.disabled=false; stopBtn.disabled=true; uploadBtn.disabled=true; audioBlob=null;
+    clearBtn.addEventListener('click', () => {
+      manualTranscriptEl.value=''; 
+      transcriptBox.textContent='No transcript yet...'; 
+      summaryBox.innerHTML='No scorecard yet...'; 
+      transcriptStatus.textContent='Idle'; 
+      scoreStatus.textContent='Waiting'; 
+      downloadWordBtn.disabled=true; 
+      audioFileInput.value=''; 
+      startBtn.disabled=false; 
+      stopBtn.disabled=true; 
+      uploadBtn.disabled=true; 
+      audioBlob=null;
+      checkApiKey(); // Re-check the key state to re-enable buttons
     });
 
     // ====== Export to Word (DOCX, with HTML fallback) ======
