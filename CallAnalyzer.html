@@ -98,6 +98,7 @@
       <button id="analyzeManualBtn">Analyze Manual Transcript</button>
       <button id="clearBtn" class="secondary">Clear Output</button>
       <button id="privacyBtn" class="secondary">Privacy Statement</button>
+      <button id="callGeneratorBtn" class="secondary">AI Call Generator</button>
       <input id="audioFile" type="file" accept="audio/wav,.wav" style="display:none" />
     </div>
 
@@ -176,6 +177,7 @@
     const privacyBtn = document.getElementById('privacyBtn');
     const privacyPopup = document.getElementById('privacyPopup');
     const closePopupBtn = document.getElementById('closePopupBtn');
+    const callGeneratorBtn = document.getElementById('callGeneratorBtn');
 
     // ====== Initial state check and API key loading ======
     function checkApiKey(){
@@ -323,6 +325,12 @@ async function analyzeWithOpenAI(transcriptText){
             privacyPopup.style.display = 'none';
         }
     });
+
+    // ====== New Event Listener for AI Call Generator Button ======
+    callGeneratorBtn.addEventListener('click', () => {
+        window.open('callgenerator.html', '_blank');
+    });
   </script>
 </body>
+
 </html>
