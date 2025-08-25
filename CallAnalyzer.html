@@ -36,6 +36,44 @@
     .actions-row{display:grid; grid-template-columns:1fr; gap:10px; margin-top:10px;} 
     .status{display:inline-block; padding:4px 10px; border-radius:999px; background:#E8F8FE; color:var(--light-blue); font-weight:700; font-size:13px;} 
     footer{margin-top:30px; font-size:13px; color:var(--medium-grey); text-align:center;}
+    
+    /* New styles for the privacy popup */
+    #privacyPopup {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 10;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    #privacyPopup .content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    #privacyPopup h2 {
+      margin-top: 0;
+    }
+
+    #privacyPopup button#closePopupBtn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: auto;
+      min-width: 0;
+      padding: 5px 10px;
+      background: var(--just-grey);
+    }
   </style>
 </head>
 <body>
@@ -59,6 +97,7 @@
       <button id="uploadBtn" disabled>Upload & Analyze</button>
       <button id="analyzeManualBtn">Analyze Manual Transcript</button>
       <button id="clearBtn" class="secondary">Clear Output</button>
+      <button id="privacyBtn" class="secondary">Privacy Statement</button>
       <input id="audioFile" type="file" accept="audio/wav,.wav" style="display:none" />
     </div>
 
@@ -81,6 +120,30 @@
     <footer>
       All call transcripts and scorecards are automatically anonymized in accordance with GDPR standards and regulations.
     </footer>
+  </div>
+
+  <div id="privacyPopup">
+      <div class="content">
+          <h2 style="margin-top:0;">Privacy Statement</h2>
+          <p>Your privacy is our priority. This website is designed to analyze service calls without collecting or storing any of your personal data. We want you to feel confident knowing how your information is handled.</p>
+          <h4>How It Works: Privacy by Design</h4>
+          <p>The "Service Call Analyzer" is a "frontend" web application. This means it runs entirely in your web browser. We do not have a separate server to process or store your data.</p>
+          <ul>
+              <li>**No Data Storage:** We do not save your audio recordings, uploaded files, or transcripts on our servers. Your information exists only temporarily in your browser's memory while the analysis is taking place.</li>
+              <li>**Direct-to-API Communication:** Your data is sent directly from your browser to trusted third-party services for processing. We use <b>AssemblyAI</b> for transcription and <b>OpenAI</b> for generating the scorecard.</li>
+              <li>**Data Minimization:** We only send the information that is necessary for the task at hand.</li>
+          </ul>
+          <h4>Our Privacy Safeguards</h4>
+          <p>We've implemented a multi-layered approach to protect your data and comply with privacy regulations like the GDPR.</p>
+          <ol>
+              <li>**Client-Side Anonymization:** Before any transcript is sent to a third-party API, a special function in the application automatically checks for sensitive information like names, phone numbers, email addresses, and account details. It replaces this data with a generic placeholder like <code>[ANONYMIZED DATA]</code> to ensure no personally identifiable information (PII) leaves your browser in its original form.</li>
+              <li>**Explicit AI Instructions:** We specifically instruct the AI model to perform an additional, strict check for any remaining PII and to replace it with a placeholder to ensure compliance.</li>
+              <li>**Third-Party Agreements:** We have formal agreements, known as Data Processing Addendums (DPAs), with our service providers (AssemblyAI and OpenAI). These contracts legally bind them to handle your data securely and in accordance with privacy laws.</li>
+              <li>**Your Responsibility:** Once you download the generated scorecard and transcript as a Word document, you are responsible for how you store and handle that file.</li>
+          </ol>
+          <p>For any questions about our privacy practices, please contact us.</p>
+          <button id="closePopupBtn">Close</button>
+      </div>
   </div>
 
   <script>
@@ -110,6 +173,9 @@
     const scoreStatus=document.getElementById('scoreStatus');
     const apiKeyInput=document.getElementById('apiKeyInput');
     const saveKeyBtn=document.getElementById('saveKeyBtn');
+    const privacyBtn = document.getElementById('privacyBtn');
+    const privacyPopup = document.getElementById('privacyPopup');
+    const closePopupBtn = document.getElementById('closePopupBtn');
 
     // ====== Initial state check and API key loading ======
     function checkApiKey(){
@@ -241,6 +307,21 @@ async function analyzeWithOpenAI(transcriptText){
       const hasDocx = await ensureDocx();
       if(hasDocx){ const { Document, Packer, Paragraph, Table, TableRow, TableCell, WidthType, HeadingLevel } = window.docx; const getText = el => (el ? el.textContent.trim() : ''); const ts = new Date().toLocaleString(); const overallText = getText(summaryBox.querySelector('.overall-score')) || 'Overall score: N/A'; const tableEl = summaryBox.querySelector('table.scorecard'); let table; if(tableEl){ const rows=[]; tableEl.querySelectorAll('tr').forEach(tr=>{ const cells = Array.from(tr.children).map(td=> new TableCell({ children:[ new Paragraph(td.textContent.trim()) ] })); rows.push(new TableRow({ children: cells })); }); table = new Table({ rows, width:{ size:100, type: WidthType.PERCENTAGE } }); } const post = summaryBox.querySelector('.post-summary'); const page1Children=[]; if(post){ post.childNodes.forEach(node=>{ if(node.nodeType!==1) return; const tag=node.tagName.toLowerCase(); const txt=(node.textContent||'').trim(); if(!txt) return; if(tag==='h4') page1Children.push(new Paragraph({ text: txt, heading: HeadingLevel.HEADING_3 })); if(tag==='p') page1Children.push(new Paragraph({ text: txt })); if(tag==='ul') node.querySelectorAll('li').forEach(li=> page1Children.push(new Paragraph({ text: (li.textContent||'').trim(), bullet:{ level:0 } }))); }); } const transcriptPlain=(transcriptBox.innerText||'').trim(); const transcriptParas = transcriptPlain.split(/\n+/).map(line=> new Paragraph(line)); const metricExplanation=[ new Paragraph({ text:'Metric Explanations', heading: HeadingLevel.HEADING_2, pageBreakBefore:true }), new Paragraph({ text:'1. Professionalism and Script Adherence: Politeness, use of required opening/closing, professional tone.' }), new Paragraph({ text:'2. Active Listening and Empathy: Acknowledges the issue, avoids interruptions, uses empathetic phrasing.' }), new Paragraph({ text:'3. Problem-Solving and Accuracy: Provides correct information and a workable solution or clear next step.' }), new Paragraph({ text:'4. Sentiment and Emotional Shift: Tracks caller mood; improvement after assistance indicates effectiveness.' }), new Paragraph({ text:'5. Customer Effort: Minimizes repetitions and back-and-forth; efficient information gathering and resolution.' }), ]; const doc = new Document({ sections:[{ properties:{}, children:[ new Paragraph({ text:'Service Call Scorecard', heading: HeadingLevel.HEADING_1 }), new Paragraph({ text:`Analyzed on: ${ts}` }), new Paragraph({ text: overallText }), ...(table?[table]:[]), ...page1Children, new Paragraph({ text:'Transcript', heading: HeadingLevel.HEADING_2, pageBreakBefore:true }), ...transcriptParas, ...metricExplanation ] }] }); const blob = await Packer.toBlob(doc); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`ServiceCall_Scorecard_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.docx`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); return; }
       const html = buildHtmlDoc(); const blob = new Blob([html], { type: 'application/msword' }); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`ServiceCall_Scorecard_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.doc`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+    
+    // ====== New Event Listeners for Privacy Popup ======
+    privacyBtn.addEventListener('click', () => {
+        privacyPopup.style.display = 'flex';
+    });
+
+    closePopupBtn.addEventListener('click', () => {
+        privacyPopup.style.display = 'none';
+    });
+
+    privacyPopup.addEventListener('click', (event) => {
+        if (event.target === privacyPopup) {
+            privacyPopup.style.display = 'none';
+        }
     });
   </script>
 </body>
