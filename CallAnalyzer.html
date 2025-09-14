@@ -300,11 +300,18 @@
       background: #FAFAFA;
     }
 
-    /* Dark Mode: a single, consistent background for readability */
-    body[data-theme='dark'] table.scorecard tr,
+    /* Dark Mode alternating rows */
+    body[data-theme='dark'] table.scorecard tr:nth-child(odd),
     @media (prefers-color-scheme: dark) {
-      body:not([data-theme='light']) table.scorecard tr {
-        background: #2E2D2B !important; /* A single dark gray for all rows */
+      body:not([data-theme='light']) table.scorecard tr:nth-child(odd) {
+        background: var(--dark-row-1);
+      }
+    }
+    
+    body[data-theme='dark'] table.scorecard tr:nth-child(even),
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme='light']) table.scorecard tr:nth-child(even) {
+        background: var(--dark-row-2);
       }
     }
 
