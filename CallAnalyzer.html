@@ -6,7 +6,7 @@
     <title>Service Call Analyzer</title>
     <style>
         /* * --------------------
-         * MONOCHROME + POP COLOR SCHEME
+         * COLOR SCHEME
          * --------------------
          */
         :root {
@@ -26,32 +26,31 @@
 
         /* Dark Mode variables */
         body[data-theme='dark'] {
-            --primary: #F3F2F1;
-            --accent: #00B1E2;
-            --medium-grey: #A19F9D;
-            --just-grey: #C8C6C4;
+            --primary: #D1D5DB; /* Soft off-white */
+            --secondary: #9CA3AF; /* Medium grey for secondary text */
+            --accent: #00B1E2; /* Light Blue */
             
-            --surface: #292827;
-            --surface-alt: #1F1E1D;
-
-            /* Dark mode specific colors for alternating table rows */
-            --dark-row-1: #2E2D2B; /* Slightly darker */
-            --dark-row-2: #3B3A39; /* Slightly lighter */
+            --surface: #282C34; /* Muted dark grey surface */
+            --surface-alt: #2F343A; /* Slightly different dark background */
+            
+            --table-background-dark: #4C515B; /* New medium grey for table background */
+            --table-text-dark: #ABB2BF; /* Soft contrasting text color for table */
+            --card-border-dark: #4B5563; /* Subtle border for dark cards */
         }
 
         /* System preference-based dark mode (initial load) */
         @media (prefers-color-scheme: dark) {
             body:not([data-theme='light']) {
-                --primary: #F3F2F1;
+                --primary: #D1D5DB;
+                --secondary: #9CA3AF;
                 --accent: #00B1E2;
-                --medium-grey: #A19F9D;
-                --just-grey: #C8C6C4;
                 
-                --surface: #292827;
-                --surface-alt: #1F1E1D;
-
-                --dark-row-1: #2E2D2B;
-                --dark-row-2: #3B3A39;
+                --surface: #282C34;
+                --surface-alt: #2F343A;
+                
+                --table-background-dark: #4C515B;
+                --table-text-dark: #ABB2BF;
+                --card-border-dark: #4B5563;
             }
         }
 
@@ -79,7 +78,7 @@
         h1, h2, h3, h4 {
             font-family: 'Segoe UI', sans-serif;
             font-weight: 600; /* Semibold for a modern touch */
-            color: var(--just-grey);
+            color: var(--primary);
             line-height: 1.2;
             transition: color 0.3s ease;
         }
@@ -100,7 +99,7 @@
         
         .subtitle {
             font-style: normal; /* No italics for a cleaner look */
-            color: var(--just-grey);
+            color: var(--secondary);
             font-size: clamp(18px, 3.5vw, 24px);
             margin: 0 0 30px;
         }
@@ -129,7 +128,7 @@
         .card:hover {
             box-shadow: 0 8px 16px rgba(0,0,0,0.08);
         }
-        body[data-theme='dark'] .card, @media (prefers-color-scheme: dark) { body:not([data-theme='light']) .card { border-color: #3B3A39; } }
+        body[data-theme='dark'] .card, @media (prefers-color-scheme: dark) { body:not([data-theme='light']) .card { border-color: var(--card-border-dark); } }
 
 
         .controls,
@@ -263,7 +262,7 @@
             box-sizing: border-box;
             transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
         }
-        body[data-theme='dark'] .pre, @media (prefers-color-scheme: dark) { body:not([data-theme='light']) .pre { border-color: #3B3A39; } }
+        body[data-theme='dark'] .pre, @media (prefers-color-scheme: dark) { body:not([data-theme='light']) .pre { border-color: var(--card-border-dark); } }
         
         /*
          * --------------------
@@ -301,29 +300,22 @@
             background: #FAFAFA;
         }
 
-        /* Dark Mode alternating rows */
-        body[data-theme='dark'] table.scorecard tr:nth-child(odd),
+        /* Dark Mode table - all rows same color, with softer text */
+        body[data-theme='dark'] table.scorecard tr,
         @media (prefers-color-scheme: dark) {
-            body:not([data-theme='light']) table.scorecard tr:nth-child(odd) {
-                background: var(--dark-row-1);
-            }
+          body:not([data-theme='light']) table.scorecard tr {
+            background: var(--table-background-dark);
+          }
         }
         
-        body[data-theme='dark'] table.scorecard tr:nth-child(even),
-        @media (prefers-color-scheme: dark) {
-            body:not([data-theme='light']) table.scorecard tr:nth-child(even) {
-                background: var(--dark-row-2);
-            }
-        }
-
         /* Dark Mode text and borders for all cells */
         body[data-theme='dark'] table.scorecard th,
         body[data-theme='dark'] table.scorecard td,
         @media (prefers-color-scheme: dark) {
             body:not([data-theme='light']) table.scorecard th,
             body:not([data-theme='light']) table.scorecard td {
-                border-color: #555452; /* Darker border for contrast */
-                color: var(--primary); /* Light text on dark background */
+                border-color: var(--card-border-dark);
+                color: var(--table-text-dark); /* Using the new, softer color variable */
             }
         }
         
@@ -388,7 +380,7 @@
         footer {
             margin-top: 40px;
             font-size: 14px;
-            color: var(--medium-grey);
+            color: var(--secondary);
             text-align: center;
             display: flex;
             flex-direction: column;
@@ -469,7 +461,6 @@
         body[data-theme='dark'] h1, body[data-theme='dark'] h2, body[data-theme='dark'] h3, body[data-theme='dark'] h4, body[data-theme='dark'] footer {
             transition: color 0.3s ease;
         }
-
     </style>
 </head>
 <body data-theme="light">
@@ -619,9 +610,13 @@
                 saveKeyBtn.disabled = true;
                 if(audioBlob) {
                     uploadBtn.disabled = false;
+                    uploadBtn.classList.remove('secondary');
+                    uploadBtn.classList.remove('button-blue-disabled');
                 }
             } else {
                 uploadBtn.disabled = true;
+                uploadBtn.classList.add('secondary');
+                uploadBtn.classList.remove('button-blue-disabled');
             }
         }
         window.onload = checkApiKey;
@@ -652,6 +647,8 @@
             audioURL = URL.createObjectURL(audioBlob);
             if (OPENAI_KEY) {
                 uploadBtn.disabled=false; 
+                uploadBtn.classList.remove('secondary');
+                uploadBtn.classList.remove('button-blue-disabled');
             }
             selectFileBtn.disabled = true;
             selectFileBtn.classList.add('button-blue-disabled');
@@ -767,6 +764,7 @@
             downloadWordBtn.disabled=true; 
             audioFileInput.value=''; 
             uploadBtn.disabled=true; 
+            uploadBtn.classList.add('secondary'); /* Ensure button is gray after clearing */
             uploadBtn.classList.remove('button-blue-disabled'); 
             listenBtn.disabled = true;
             listenBtn.classList.add('secondary');
